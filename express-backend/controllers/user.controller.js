@@ -1,6 +1,7 @@
 const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const { ensureUploadsReset } = require("../utils/resetHelper");
+const { delCache } = require("../utils/redis");
 
 async function updateProfile(req, res, next) {
   try {
@@ -14,6 +15,7 @@ async function updateProfile(req, res, next) {
     
     const user = await User.findByIdAndUpdate(req.userId, updateData, { returnDocument: 'after' });
     const resetUser = await ensureUploadsReset(user);
+    await delCache(`user:profile:${req.userId}`);
     return res.json({ user: { id: resetUser.id, name: resetUser.name, email: resetUser.email, avatarInitials: resetUser.avatarInitials, avatarBase64: resetUser.avatarBase64, isPro: resetUser.isPro, activePlan: resetUser.activePlan, purchasedPlans: resetUser.purchasedPlans, uploadsToday: resetUser.uploadsToday, rewardsPoints: resetUser.rewardsPoints } });
   } catch (error) { return next(error); }
 }
@@ -42,6 +44,7 @@ async function deleteAccount(req, res, next) {
     const LearningContent = require("../models/LearningContent");
     await LearningContent.deleteMany({ user: req.userId });
     await User.findByIdAndDelete(req.userId);
+    await delCache(`user:profile:${req.userId}`);
     return res.json({ message: "Account and all associated data successfully deleted." });
   } catch (error) { return next(error); }
 }
@@ -64,6 +67,7 @@ async function purchasePlan(req, res, next) {
     await user.save();
     
     const resetUser = await ensureUploadsReset(user);
+    await delCache(`user:profile:${req.userId}`);
     return res.json({ message: `Successfully upgraded to ${planName} Plan!`, user: { id: resetUser.id, name: resetUser.name, email: resetUser.email, avatarInitials: resetUser.avatarInitials, avatarBase64: resetUser.avatarBase64, isPro: resetUser.isPro, activePlan: resetUser.activePlan, purchasedPlans: resetUser.purchasedPlans, uploadsToday: resetUser.uploadsToday, rewardsPoints: resetUser.rewardsPoints } });
   } catch (error) { return next(error); }
 }
@@ -83,6 +87,7 @@ async function switchPlan(req, res, next) {
     await user.save();
     
     const resetUser = await ensureUploadsReset(user);
+    await delCache(`user:profile:${req.userId}`);
     return res.json({ message: `Switched to ${planName} Plan.`, user: { id: resetUser.id, name: resetUser.name, email: resetUser.email, avatarInitials: resetUser.avatarInitials, avatarBase64: resetUser.avatarBase64, isPro: resetUser.isPro, activePlan: resetUser.activePlan, purchasedPlans: resetUser.purchasedPlans, uploadsToday: resetUser.uploadsToday, rewardsPoints: resetUser.rewardsPoints } });
   } catch (error) { return next(error); }
 }

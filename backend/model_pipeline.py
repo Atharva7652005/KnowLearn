@@ -98,7 +98,7 @@ def answer_from_transcript(transcript: str, question: str, previous_feedback: li
     try:
         embeddings = GoogleGenerativeAIEmbeddings(model="gemini-embedding-001", google_api_key=gemini_api_key)
         
-        index_name = "knowlearn-db"
+        index_name = "graspify-db"
         pc = Pinecone(api_key=getenv("PINECONE_API_KEY"))
         index = pc.Index(index_name)
         

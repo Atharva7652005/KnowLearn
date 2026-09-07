@@ -3,6 +3,7 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const { JWT_EXPIRES_IN } = require("../const");
 const { ensureUploadsReset } = require("../utils/resetHelper");
+const { getCache, setCache } = require("../utils/redis");
 
 function publicUser(user) {
   return { id: user.id, name: user.name, email: user.email, avatarInitials: user.avatarInitials, avatarBase64: user.avatarBase64, isPro: user.isPro, activePlan: user.activePlan, purchasedPlans: user.purchasedPlans, uploadsToday: user.uploadsToday, docUploadsToday: user.docUploadsToday, rewardsPoints: user.rewardsPoints };
@@ -39,10 +40,17 @@ async function login(req, res, next) {
 
 async function me(req, res, next) {
   try {
+    const cacheKey = `user:profile:${req.userId}`;
+    const cachedProfile = await getCache(cacheKey);
+    if (cachedProfile) return res.json({ user: cachedProfile });
+
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ message: "User not found." });
     const resetUser = await ensureUploadsReset(user);
-    return res.json({ user: publicUser(resetUser) });
+    const profile = publicUser(resetUser);
+    
+    await setCache(cacheKey, profile, 3600);
+    return res.json({ user: profile });
   } catch (error) { return next(error); }
 }
 

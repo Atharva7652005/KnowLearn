@@ -4,6 +4,7 @@ const axios = require("axios");
 const LearningContent = require("../models/LearningContent");
 const ChatFeedback = require("../models/ChatFeedback");
 const User = require("../models/User");
+const { getCache, setCache, delCache } = require("../utils/redis");
 const { FASTAPI_URL } = require("../const");
 const cloudinary = require("cloudinary").v2;
 
@@ -146,6 +147,7 @@ async function createTranscript(req, res, next) {
       transcript: result.original_transcript,
       englishTranslation: result.english_translation,
     });
+    await delCache(`user:content:list:${req.userId}`);
     return res.status(201).json({ content: toClientContent(content) });
   } catch (error) { return next(error); }
 }
@@ -163,16 +165,28 @@ function toClientContent(content) {
 
 async function listContent(req, res, next) {
   try {
+    const cacheKey = `user:content:list:${req.userId}`;
+    const cachedList = await getCache(cacheKey);
+    if (cachedList) return res.json({ content: cachedList });
+
     const content = await LearningContent.find({ user: req.userId }).sort({ updatedAt: -1 }).limit(50);
-    return res.json({ content: content.map(toClientContent) });
+    const result = content.map(toClientContent);
+    await setCache(cacheKey, result, 1800); // 30 minutes
+    return res.json({ content: result });
   } catch (error) { return next(error); }
 }
 
 async function getContent(req, res, next) {
   try {
+    const cacheKey = `content:detail:${req.params.contentId}`;
+    const cachedContent = await getCache(cacheKey);
+    if (cachedContent) return res.json({ content: cachedContent });
+
     const content = await LearningContent.findOne({ _id: req.params.contentId, user: req.userId });
     if (!content) return res.status(404).json({ message: "Learning material not found." });
-    return res.json({ content: toClientContent(content) });
+    const result = toClientContent(content);
+    await setCache(cacheKey, result, 86400); // 24 hours
+    return res.json({ content: result });
   } catch (error) { return next(error); }
 }
 
@@ -184,6 +198,7 @@ async function summary(req, res, next) {
     const result = await fastApi("/summary", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content_id: content.fastApiContentId, model: config.model }) });
     content.summary = result.summary;
     await content.save();
+      await delCache(`content:detail:${req.params.contentId}`);
     return res.json({ summary: result.summary });
   } catch (error) { return next(error); }
 }
@@ -208,6 +223,7 @@ async function chat(req, res, next) {
     if (result.answer) {
       content.chatHistory.push({ role: "assistant", text: result.answer, source: result.retrieved_context?.[0] });
       await content.save();
+      await delCache(`content:detail:${req.params.contentId}`);
     }
     
     return res.json(result);
@@ -247,6 +263,7 @@ async function quiz(req, res, next) {
     });
     content.quiz = { quizId: result.quiz_id, questions: result.questions };
     await content.save();
+      await delCache(`content:detail:${req.params.contentId}`);
     return res.json(result);
   } catch (error) { return next(error); }
 }
@@ -259,6 +276,7 @@ async function notes(req, res, next) {
     const result = await fastApi("/notes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content_id: content.fastApiContentId, model: config.model }) });
     content.notes = result.notes;
     await content.save();
+      await delCache(`content:detail:${req.params.contentId}`);
     return res.json({ notes: result.notes });
   } catch (error) { return next(error); }
 }
@@ -271,6 +289,7 @@ async function flashcards(req, res, next) {
     const result = await fastApi("/flashcards", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content_id: content.fastApiContentId, count: config.count, model: config.model }) });
     content.flashcards = result.flashcards;
     await content.save();
+      await delCache(`content:detail:${req.params.contentId}`);
     return res.json({ flashcards: result.flashcards });
   } catch (error) { return next(error); }
 }
@@ -282,6 +301,7 @@ async function evaluate(req, res, next) {
     const result = await fastApi("/evaluate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ quiz_id: content.quiz.quizId, answers: req.body.answers }) });
     content.latestAnalysis = result;
     await content.save();
+      await delCache(`content:detail:${req.params.contentId}`);
     
     // Award points
     await User.findByIdAndUpdate(req.userId, { $inc: { rewardsPoints: 50 } });
@@ -295,6 +315,8 @@ async function deleteContent(req, res, next) {
     const { contentId } = req.params;
     const content = await LearningContent.findOneAndDelete({ _id: contentId, user: req.userId });
     if (!content) return res.status(404).json({ message: "Content not found." });
+    await delCache(`user:content:list:${req.userId}`);
+    await delCache(`content:detail:${contentId}`);
     return res.json({ message: "Content deleted successfully." });
   } catch (error) { return next(error); }
 }
@@ -340,6 +362,7 @@ async function translateContent(req, res, next) {
     if (!content.translations) content.translations = new Map();
     content.translations.set(targetLanguage, result.translation);
     await content.save();
+      await delCache(`content:detail:${req.params.contentId}`);
 
     return res.json({ translation: result.translation });
   } catch (error) {
