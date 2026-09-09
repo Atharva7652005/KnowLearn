@@ -1,6 +1,6 @@
 # KnowLearn
 
-KnowLearn is an AI-powered educational content understanding and learner-analytics framework. It transforms multilingual educational audio or video into structured learning material, grounded question answering, automatically generated assessments, and concept-level grasping estimates.
+KnowLearn is an AI-powered educationa content understanding and learner-analytics framework. It transforms multilingual educational audio or video into structured learning material, grounded question answering, automatically generated assessments, and concept-level grasping estimates.
 
 ## Overview
 
