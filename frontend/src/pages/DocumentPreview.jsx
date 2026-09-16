@@ -22,6 +22,18 @@ export default function DocumentPreview({ document, setPage }) {
       setIsDownloading(true);
       setDownloadError("");
       
+      // If it's a remote URL (like Cloudinary), CORS might block fetch(). Use native browser download.
+      if (document.documentUrl.includes("http")) {
+        const link = window.document.createElement('a');
+        link.href = document.documentUrl;
+        link.download = document.fileName || "translated_document";
+        link.target = "_blank";
+        window.document.body.appendChild(link);
+        link.click();
+        link.remove();
+        return;
+      }
+      
       const response = await fetch(document.documentUrl);
       if (!response.ok) throw new Error("Failed to fetch document");
       
@@ -49,12 +61,7 @@ export default function DocumentPreview({ document, setPage }) {
 
   return (
     <div className="max-w-6xl mx-auto py-8 px-4 h-[calc(100vh-60px)] flex flex-col">
-      <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg mb-6 flex items-center gap-3 shadow-sm">
-        <AlertCircle size={20} className="text-amber-500 flex-shrink-0" />
-        <p className="text-sm font-medium">
-          <strong>Security Notice:</strong> Your translated document will be available for exactly 5 minutes before it is auto-deleted from our servers. Please download it now.
-        </p>
-      </div>
+
 
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">

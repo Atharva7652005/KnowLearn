@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_EXPRESS_API_URL || "http://localhost:3000/api";
+export const API_URL = import.meta.env.VITE_EXPRESS_API_URL || "http://localhost:3000/api";
 
 function userSafeMessage(message) {
   const detail = String(message || "");
@@ -18,6 +18,6 @@ export async function api(path, { token, method = "GET", body } = {}) {
     body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
   });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(userSafeMessage(data.message || data.detail));
+  if (!response.ok) throw new Error(userSafeMessage(data.message || data.detail || data.error));
   return data;
 }

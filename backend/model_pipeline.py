@@ -197,7 +197,8 @@ def generate_detailed_summary(transcript: str, model_name: str = "openai/gpt-4o-
     return generate_from_transcript(
         transcript,
         "Write a detailed, structured educational summary with headings for the main topics, key points, "
-        "important definitions, and a concise conclusion.",
+        "important definitions, and a concise conclusion."
+        "Output should be in English. Don't include any other language.",
         model_name
     )
 

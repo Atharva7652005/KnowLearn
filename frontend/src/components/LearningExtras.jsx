@@ -37,7 +37,20 @@ export function Flashcards({ current, token, saveContent, onNotice }) {
   }
   if (!cards.length) return <div className="learning-generator"><span>*</span><h2>Build flashcards</h2><p>Create English prompts and answers from this lesson for fast revision.</p><button className="primary" onClick={generate} disabled={generating}>{generating ? <LoadingLabel label="Creating flashcards" /> : "Generate flashcards"}</button></div>;
   const card = cards[index];
-  return <section className="flashcard-workspace"><div className="flashcard-top"><div><p>REVISION DECK</p><h2>Flashcards in English</h2></div><button className="quiz-refresh" onClick={generate} disabled={generating}>{generating ? <LoadingLabel label="Creating deck" /> : <><RefreshCw size={15} /> New deck</>}</button></div><button className={`flashcard ${revealed ? "revealed" : ""}`} onClick={() => setRevealed(!revealed)}><span>{revealed ? "ANSWER" : "PROMPT"}</span><h3>{revealed ? card.back : card.front}</h3><small>{revealed ? card.concept : "Click to reveal the answer"}</small></button><div className="flashcard-controls"><span>{index + 1} of {cards.length}</span><button onClick={() => setRevealed(!revealed)}>{revealed ? "Show prompt" : "Reveal answer"}</button><button className="primary" onClick={() => { setIndex((value) => (value + 1) % cards.length); setRevealed(false); }}>Next card</button></div></section>;
+  return <section className="flashcard-workspace"><div className="flashcard-top"><div><p>REVISION DECK</p><h2>Flashcards in English</h2></div><button className="quiz-refresh" onClick={generate} disabled={generating}>{generating ? <LoadingLabel label="Creating deck" /> : <><RefreshCw size={15} /> New deck</>}</button></div><div className="w-full h-64 mb-6 cursor-pointer" style={{ perspective: '1000px' }} onClick={() => setRevealed(!revealed)}>
+    <div className="relative w-full h-full transition-transform duration-700" style={{ transformStyle: 'preserve-3d', transform: revealed ? 'rotateY(180deg)' : 'rotateY(0deg)' }}>
+      <div className="absolute inset-0 flex flex-col justify-center items-center p-8 bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow" style={{ backfaceVisibility: 'hidden' }}>
+        <span className="text-xs font-bold text-blue-500 tracking-widest mb-4 uppercase">Prompt</span>
+        <h3 className="text-xl font-bold text-slate-800 text-center leading-relaxed">{card.front}</h3>
+        <small className="absolute bottom-6 text-slate-400">Click to reveal the answer</small>
+      </div>
+      <div className="absolute inset-0 flex flex-col justify-center items-center p-8 bg-[var(--primary-light)] border border-blue-200 rounded-2xl shadow-md" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
+        <span className="text-xs font-bold text-[var(--primary-color)] tracking-widest mb-4 uppercase">Answer</span>
+        <h3 className="text-xl font-bold text-[var(--text-primary)] text-center leading-relaxed">{card.back}</h3>
+        <small className="absolute bottom-6 text-[var(--primary-color)] opacity-70 font-semibold">{card.concept}</small>
+      </div>
+    </div>
+  </div><div className="flashcard-controls"><span>{index + 1} of {cards.length}</span><button onClick={() => setRevealed(!revealed)}>{revealed ? "Show prompt" : "Reveal answer"}</button><button className="primary" onClick={() => { setIndex((value) => (value + 1) % cards.length); setRevealed(false); }}>Next card</button></div></section>;
 }
 
 

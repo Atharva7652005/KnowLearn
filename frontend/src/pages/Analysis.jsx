@@ -142,7 +142,7 @@ export default function Analysis({ session, token, setPage }) {
         
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-start justify-between">
           <div>
-            <p className="text-sm text-slate-500 font-semibold mb-1">AI Regenerations</p>
+            <p className="text-sm text-slate-500 font-semibold mb-1">Regenerations</p>
             <h3 className="text-3xl font-bold text-slate-900">{analytics.totalGenerations}</h3>
           </div>
           <div className="w-10 h-10 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center">
@@ -162,7 +162,7 @@ export default function Analysis({ session, token, setPage }) {
 
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-start justify-between">
           <div>
-            <p className="text-sm text-slate-500 font-semibold mb-1">AI Approval Rating</p>
+            <p className="text-sm text-slate-500 font-semibold mb-1">Approval Rating</p>
             <h3 className="text-3xl font-bold text-slate-900">{totalFeedback > 0 ? `${feedbackScore}%` : 'N/A'}</h3>
             {totalFeedback > 0 && <p className="text-xs text-slate-400 mt-1">Based on {totalFeedback} ratings</p>}
           </div>
@@ -262,6 +262,19 @@ export default function Analysis({ session, token, setPage }) {
                   <div className={`h-2.5 rounded-full ${docUploadsPercentage >= 100 ? 'bg-red-500' : 'bg-amber-500'}`} style={{ width: `${docUploadsPercentage}%` }}></div>
                 </div>
                 <p className="text-xs text-slate-500 mt-2">Premium exclusive. Resets at midnight.</p>
+              </div>
+            )}
+
+            {(activePlan === 'Pro' || activePlan === 'Premium') && (
+              <div className="mb-6">
+                <div className="flex justify-between items-end mb-2">
+                  <span className="text-sm font-semibold text-slate-700 flex items-center gap-1"><Bot size={14} className="text-fuchsia-500"/> Premium AI Voices</span>
+                  <span className="text-xs font-bold text-slate-500">{analytics?.sarvamUsageCount || 0} / {analytics?.sarvamUsageLimit || (activePlan === 'Pro' ? 1 : 5)}</span>
+                </div>
+                <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                  <div className={`h-2.5 rounded-full ${((analytics?.sarvamUsageCount || 0) / (analytics?.sarvamUsageLimit || (activePlan === 'Pro' ? 1 : 5))) * 100 >= 100 ? 'bg-red-500' : 'bg-fuchsia-500'}`} style={{ width: `${Math.min(((analytics?.sarvamUsageCount || 0) / (analytics?.sarvamUsageLimit || (activePlan === 'Pro' ? 1 : 5))) * 100, 100)}%` }}></div>
+                </div>
+                <p className="text-xs text-slate-500 mt-2">Text to Speech Engine. Resets at midnight.</p>
               </div>
             )}
             

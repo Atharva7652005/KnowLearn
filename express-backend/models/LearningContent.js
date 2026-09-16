@@ -4,7 +4,7 @@ const learningContentSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
     fastApiContentId: { type: String, required: true },
-    sourceType: { type: String, enum: ["youtube_url", "media_upload"], required: true },
+    sourceType: { type: String, enum: ["youtube_url", "media_upload", "document"], required: true },
     sourceUrl: String,
     title: { type: String, required: true, trim: true, maxlength: 160 },
     language: { type: String, default: "en-US" },

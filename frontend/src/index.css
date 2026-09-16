@@ -29,11 +29,12 @@
     --radius-lg: 24px;
     --radius-full: 9999px;
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --bg-glass: rgba(255, 255, 255, 0.75);
     --shadow-md:
       0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   }
 
-  [data-theme="dark"] {
+  .dark {
     --bg-main: #020617; /* slate-950 */
     --bg-sidebar: #0f172a; /* slate-900 */
     --bg-hover: #1e293b; /* slate-800 */
@@ -46,6 +47,7 @@
     --primary-color: #3b82f6; /* blue-500 */
     --primary-light: #1e3a8a; /* blue-900 */
     --primary-dark: #60a5fa; /* blue-400 */
+    --bg-glass: rgba(15, 23, 42, 0.75);
     --primary-gradient: linear-gradient(to right, #3b82f6, #a855f7);
   }
 
@@ -68,10 +70,16 @@
   }
 
   .card-modern {
-    background: var(--bg-card);
+    background: var(--bg-glass);
+    backdrop-filter: blur(12px);
     border: 1px solid var(--border-color);
     border-radius: 16px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .card-modern:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   }
 
   * {
@@ -452,18 +460,8 @@
     overflow-y: auto;
     box-shadow: 8px 0 30px rgba(15, 23, 42, 0.035);
   }
-  .logo-section {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 2rem;
-    cursor: pointer;
-    padding: 8px;
-    border-radius: 12px;
-  }
-  .logo-section:hover {
-    background: var(--bg-hover);
-  }
+  
+  
   .logo-img {
     height: 24px;
     width: 24px;
@@ -2321,35 +2319,35 @@
   }
 
   /* Dark theme overrides */
-  html[data-theme="dark"] {
+  html.dark {
     color-scheme: dark;
   }
-  html[data-theme="dark"] body,
-  html[data-theme="dark"] .shell,
-  html[data-theme="dark"] .workspace,
-  html[data-theme="dark"] .learn-chat-page {
+  html.dark body,
+  html.dark .shell,
+  html.dark .workspace,
+  html.dark .learn-chat-page {
     background: #101814 !important;
     color: #e6eee9;
   }
-  html[data-theme="dark"] .utility-card,
-  html[data-theme="dark"] .account-stats article,
-  html[data-theme="dark"] .search-dialog,
-  html[data-theme="dark"] .learn-chat-head,
-  html[data-theme="dark"] .learn-composer {
+  html.dark .utility-card,
+  html.dark .account-stats article,
+  html.dark .search-dialog,
+  html.dark .learn-chat-head,
+  html.dark .learn-composer {
     background: #17221c;
     border-color: #2c4035;
   }
-  html[data-theme="dark"] .utility-hero h1,
-  html[data-theme="dark"] .preference-heading h2,
-  html[data-theme="dark"] .account-stats strong,
-  html[data-theme="dark"] .learn-empty h1 {
+  html.dark .utility-hero h1,
+  html.dark .preference-heading h2,
+  html.dark .account-stats strong,
+  html.dark .learn-empty h1 {
     color: #eef8f1;
   }
-  html[data-theme="dark"] .search-page {
+  html.dark .search-page {
     background: #101814;
   }
-  html[data-theme="dark"] .search-dialog input,
-  html[data-theme="dark"] .learn-composer textarea {
+  html.dark .search-dialog input,
+  html.dark .learn-composer textarea {
     background: transparent;
     color: #eef8f1;
   }
@@ -2699,15 +2697,8 @@
     align-items: center;
     gap: 4px;
   }
-  .logo-section {
-    margin: 0;
-  }
-  .logo-section .logo-text,
-  .add-content-btn,
-  .sidebar-section,
-  .sidebar-bottom {
-    display: none;
-  }
+  
+  
   .nav-menu {
     display: flex;
     flex-direction: row;
@@ -3002,3 +2993,13 @@
 }
 
 .mobile-only { display: none; } @media (max-width: 700px) { .mobile-only { display: flex !important; } .sidebar-modern .profile-dropdown { display: flex; position: absolute; right: 16px; top: -50px; background: var(--bg-card); padding: 8px 12px; border-radius: 99px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 1px solid var(--border-color); } .sidebar-modern .profile-name { display: none; } .dropdown-menu { bottom: calc(100% + 8px); top: auto; right: 0; left: auto; } }
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}

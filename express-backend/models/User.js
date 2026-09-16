@@ -10,6 +10,10 @@ const userSchema = new mongoose.Schema(
     isPro: { type: Boolean, default: false },
     activePlan: { type: String, default: "Free", enum: ["Free", "Basic", "Pro", "Premium"] },
     purchasedPlans: { type: [String], default: ["Free"] },
+    sarvamUsage: {
+      date: { type: String, default: "" },
+      convertedVideos: { type: [String], default: [] }
+    },
     uploadsToday: {
       count: { type: Number, default: 0 },
       date: { type: String, default: "" }

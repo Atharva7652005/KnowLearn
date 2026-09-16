@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { api } from "../api";
-import { Bot, LoaderCircle, MessageCircle, RefreshCw, Send, Sparkles, ChevronDown, Check } from "lucide-react";
+import { Bot, LoaderCircle, MessageCircle, RefreshCw, Send, Sparkles, ChevronDown, Check, Globe, Clock, FileText, PlaySquare, Copy, ExternalLink, Video, Volume2, Square } from "lucide-react";
 import { Flashcards, Notes } from "../components/LearningExtras";
 import ReactMarkdown from "react-markdown";
 
@@ -18,7 +18,7 @@ const TRANSLATION_LANGUAGES = [
 
 function getLanguagesForPlan(plan) {
   if (plan === "Free") return ["English"];
-  if (plan === "Basic") return ["English", "Hindi", "Marathi"];
+  if (plan === "Basic") return ["English", "Hindi"];
   if (plan === "Pro") return TRANSLATION_LANGUAGES.slice(0, 12);
   return TRANSLATION_LANGUAGES;
 }
@@ -29,6 +29,124 @@ export default function Lesson({ current, loading, onSummary, onQuiz, onNotice, 
   const [targetLang, setTargetLang] = useState(current?.englishTranslation ? "English" : "");
   const [translatedText, setTranslatedText] = useState(current?.englishTranslation || "");
   const [isTranslating, setIsTranslating] = useState(false);
+
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  
+  const [isTtsLoading, setIsTtsLoading] = useState(false);
+  const audioRef = useRef(null);
+
+  const handleSpeak = async () => {
+    // If speaking, stop it
+    if (isSpeaking) {
+      window.__currentTTSId = null;
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+    
+    if (!translatedText) return;
+
+    const webSpeechLangs = ["English", "Hindi", "Chinese", "Japanese", "Spanish", "French", "German"];
+    const sarvamLangs = ["Marathi", "Tamil", "Telugu", "Kannada", "Bengali", "Gujarati", "Punjabi", "Malayalam", "Odia", "Arabic"];
+
+    if (webSpeechLangs.includes(targetLang) || (!webSpeechLangs.includes(targetLang) && !sarvamLangs.includes(targetLang))) {
+      // 1. WEB SPEECH API ROUTE
+      const utterance = new SpeechSynthesisUtterance(translatedText);
+      
+      const langMap = {
+        "English": "en",
+        "Hindi": "hi",
+        "Chinese": "zh",
+        "Japanese": "ja",
+        "French": "fr",
+        "Spanish": "es",
+        "German": "de"
+      };
+      
+      const prefix = langMap[targetLang] || "en";
+      const voices = window.speechSynthesis.getVoices();
+      const voice = voices.find(v => v.lang.startsWith(prefix) || v.lang.startsWith(prefix.toLowerCase()));
+      
+      if (voice) {
+        utterance.voice = voice;
+      } else {
+        utterance.lang = prefix; 
+      }
+      
+      utterance.onend = () => setIsSpeaking(false);
+      utterance.onerror = () => setIsSpeaking(false);
+      
+      setIsSpeaking(true);
+      window.speechSynthesis.speak(utterance);
+
+    } else if (sarvamLangs.includes(targetLang)) {
+      // 2. SARVAM AI HYBRID ROUTE
+      window.__currentTTSId = Date.now();
+      const currentSession = window.__currentTTSId;
+      
+      const chunks = [];
+      const sentences = translatedText.match(/[^.!?]+[.!?]*/g) || [translatedText];
+      let currentChunk = "";
+      for (const sentence of sentences) {
+        if (currentChunk.length + sentence.length < 450) {
+          currentChunk += sentence;
+        } else {
+          if (currentChunk) chunks.push(currentChunk.trim());
+          currentChunk = sentence;
+        }
+      }
+      if (currentChunk) chunks.push(currentChunk.trim());
+      
+      const fetchChunk = async (index) => {
+        if (index >= chunks.length || window.__currentTTSId !== currentSession) return null;
+        return api("/learning/tts", {
+          token, method: "POST",
+          body: { text: chunks[index], targetLang, contentId: current.id }
+        }).catch(err => { throw err; });
+      };
+
+      try {
+        setIsTtsLoading(true);
+        setIsSpeaking(true); // show stop button immediately
+        let nextFetchPromise = fetchChunk(0);
+        
+        for (let i = 0; i < chunks.length; i++) {
+          if (window.__currentTTSId !== currentSession) break;
+          
+          const res = await nextFetchPromise;
+          setIsTtsLoading(false); // hide spinner after first chunk loads
+          
+          // Eagerly fetch the next chunk for optimal performance while this one plays
+          nextFetchPromise = fetchChunk(i + 1); 
+          
+          if (window.__currentTTSId !== currentSession) break;
+
+          if (res && res.audio) {
+            const audio = new Audio("data:audio/wav;base64," + res.audio);
+            audioRef.current = audio;
+            await new Promise((resolve) => {
+              audio.onended = resolve;
+              audio.onerror = resolve;
+              audio.play();
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Sarvam TTS Error:", err);
+        if (onNotice) onNotice(err.message);
+      } finally {
+        if (window.__currentTTSId === currentSession) {
+          setIsSpeaking(false);
+          setIsTtsLoading(false);
+        }
+      }
+    }
+  };
+
 
   useEffect(() => {
     if (current) {
@@ -84,12 +202,90 @@ export default function Lesson({ current, loading, onSummary, onQuiz, onNotice, 
     setTab("Quiz");
   };
 
+
+
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    if(current?.transcript) {
+        navigator.clipboard.writeText(current.transcript);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  
+  const getAppDarkMode = () => {
+    if (typeof document === "undefined") return false;
+    return (
+      document.documentElement.classList.contains("dark") ||
+      document.body?.classList.contains("dark")
+    );
+  };
+  const [isDarkMode, setIsDarkMode] = useState(getAppDarkMode);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const updateTheme = () => setIsDarkMode(getAppDarkMode());
+    updateTheme();
+    const observer = new MutationObserver(updateTheme);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    if (document.body) observer.observe(document.body, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, []);
+
+  const wordCount = current?.transcript ? current.transcript.split(/\s+/).length : 0;
+  const readingTime = Math.ceil(wordCount / 200);
+
   return (
     <div className="max-w-4xl mx-auto py-8 px-4">
-      <h1 className="text-3xl font-bold text-slate-900 mb-6">{current.title}</h1>
-      <div className="lesson-meta shadow-sm rounded-t-lg">
-        <span>{current.sourceType === "youtube_url" ? "YouTube" : "Upload"}</span>
-        <span>{current.language}</span>
+      <h1 className={`text-3xl font-bold mb-6 ${isDarkMode ? "text-white" : "text-slate-900"}`}>{current.title}</h1>
+      <div className={`rounded-2xl p-5 mb-8 border shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 ${isDarkMode ? "bg-slate-800/50 border-slate-700" : "bg-white border-slate-200"}`}>
+        
+        {/* Badges Row */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${current.sourceType === "youtube_url" ? (isDarkMode ? "bg-red-900/30 text-red-400" : "bg-red-100 text-red-600") : (isDarkMode ? "bg-blue-900/30 text-blue-400" : "bg-blue-100 text-blue-600")}`}>
+            {current.sourceType === "youtube_url" ? <PlaySquare size={14} /> : <Video size={14} />}
+            {current.sourceType === "youtube_url" ? "YouTube" : "Media Upload"}
+          </div>
+          
+          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${isDarkMode ? "bg-indigo-900/30 text-indigo-400" : "bg-indigo-100 text-indigo-600"}`}>
+            <Globe size={14} />
+            {current.language}
+          </div>
+
+          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${isDarkMode ? "bg-emerald-900/30 text-emerald-400" : "bg-emerald-100 text-emerald-600"}`}>
+            <FileText size={14} />
+            {wordCount.toLocaleString()} Words
+          </div>
+
+          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${isDarkMode ? "bg-amber-900/30 text-amber-400" : "bg-amber-100 text-amber-600"}`}>
+            <Clock size={14} />
+            {readingTime} Min Read
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2">
+          {current.sourceUrl && (
+            <a 
+              href={current.sourceUrl} 
+              target="_blank" 
+              rel="noreferrer"
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isDarkMode ? "text-slate-400 hover:text-white hover:bg-slate-700" : "text-slate-600 hover:text-slate-900 hover:bg-slate-200"}`}
+            >
+              <ExternalLink size={16} />
+              <span className="hidden sm:inline">Source</span>
+            </a>
+          )}
+          <button 
+            onClick={handleCopy}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isDarkMode ? "bg-slate-700 hover:bg-slate-600 text-slate-200" : "bg-slate-200 hover:bg-slate-300 text-slate-800"}`}
+          >
+            {copied ? <Check size={16} className="text-emerald-500" /> : <Copy size={16} />}
+            <span className="hidden sm:inline">{copied ? "Copied!" : "Copy Transcript"}</span>
+          </button>
+        </div>
+
       </div>
       <div className="tabs">
         {tabs.map((item) => (
@@ -140,22 +336,35 @@ export default function Lesson({ current, loading, onSummary, onQuiz, onNotice, 
               <span className="transcript-icon"><Sparkles size={17} /></span>
               <div className="flex-1 flex justify-between items-center">
                 <div><p>ACCESSIBILITY VIEW</p><h2>Translation</h2></div>
-                <select 
+                <div className="flex items-center gap-2 ml-4">
+                  <button
+                    onClick={handleSpeak}
+                    disabled={isTranslating || !translatedText}
+                    className={`p-2 rounded-lg text-sm font-medium transition-colors border shadow-sm flex items-center justify-center ${isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'} disabled:opacity-50`}
+                    title={isSpeaking ? "Stop Reading" : "Read Aloud"}
+                  >
+                    {isTtsLoading ? <LoaderCircle size={18} className="animate-spin" /> : (isSpeaking ? <Square size={18} className={isDarkMode ? "fill-slate-300" : "fill-slate-700"} /> : <Volume2 size={18} />)}
+                  </button>
+                  <select 
                   value={targetLang} 
                   onChange={handleTranslate}
                   disabled={isTranslating}
-                  className="ml-4 p-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 font-medium focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="p-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 font-medium focus:ring-2 focus:ring-blue-500 outline-none"
                 >
                   <option value="">Select language</option>
                   {getLanguagesForPlan(activePlan).map(lang => <option key={lang} value={lang}>{lang}</option>)}
                 </select>
+                </div>
               </div>
             </div>
             <div className="transcript-scroll">
               {isTranslating ? (
-                <div className="flex flex-col items-center justify-center h-full text-slate-400 space-y-4">
-                  <LoaderCircle className="animate-spin text-blue-500" size={32} />
-                  <p>Translating to {targetLang}...</p>
+                <div className="w-full space-y-3 animate-pulse p-2">
+                  <div className="h-4 bg-slate-200 rounded w-full"></div>
+                  <div className="h-4 bg-slate-200 rounded w-11/12"></div>
+                  <div className="h-4 bg-slate-200 rounded w-4/5"></div>
+                  <div className="h-4 bg-slate-200 rounded w-full"></div>
+                  <div className="h-4 bg-slate-200 rounded w-3/4"></div>
                 </div>
               ) : translatedText ? (
                 <p>{translatedText}</p>
@@ -202,11 +411,13 @@ function Quiz({ current, token, saveContent, onNotice, onQuiz, loading }) {
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+  
+  return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
   
   if (!current.quiz?.questions?.length) {
-    return (
+  
+  return (
         <div className="empty-state-large">
           <div className="empty-icon">🧠</div>
           <h3>Test Your Knowledge</h3>
@@ -231,7 +442,8 @@ function Quiz({ current, token, saveContent, onNotice, onQuiz, loading }) {
       onNotice(err.message); 
     } finally { setEvaluating(false); }
   } 
-    return (
+  
+  return (
       <form className="quiz" onSubmit={submit}>
         <div className="quiz-heading">
           <div>
@@ -262,7 +474,8 @@ function Quiz({ current, token, saveContent, onNotice, onQuiz, loading }) {
                   {[5, 10, 15].map(opt => {
                     const isSelected = displayCount === opt;
                     const isDefault = opt === 5;
-                    return (
+                  
+  return (
                       <button
                         key={opt}
                         type="button"
@@ -305,7 +518,8 @@ function Quiz({ current, token, saveContent, onNotice, onQuiz, loading }) {
               else if (isSelected) className += " incorrect";
             }
 
-            return (
+          
+  return (
               <label key={option} className={className.trim()}>
                 <input type="radio" name={question.question_id} value={option} 
                   disabled={hasAnswered}
@@ -355,6 +569,7 @@ function RagChat({ current, token, onNotice, saveContent }) {
     } catch (error) { onNotice(error.message); } finally { setSending(false); }
   }
 
+
   return (
     <section className="rag-panel">
       <div className="rag-head">
@@ -392,6 +607,7 @@ function LoadingLabel({ label }) {
 
 function Analysis({ analysis }) { 
   if (!analysis) return null; // Analysis tab is hidden if not present, so we don't need a large empty state here.
+
   return (
     <section className="analysis">
       <div className="analysis-header">

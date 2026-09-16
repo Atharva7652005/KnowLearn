@@ -34,7 +34,13 @@ export default function Profile({ session, content = [], onUserUpdate, onNotice,
   const stats = useMemo(() => ({ contents: content.length, summaries: content.filter((item) => item.summary).length, quizzes: content.filter((item) => item.quiz?.questions?.length).length }), [content]);
 
   useEffect(() => {
-    document.documentElement.dataset.theme = preferences.theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : preferences.theme;
+    const isDark = preferences.theme === "dark" || (preferences.theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    if (isDark) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+    document.documentElement.dataset.theme = isDark ? "dark" : "light";
     document.documentElement.dataset.density = preferences.compact ? "compact" : "comfortable";
     localStorage.setItem(preferencesKey, JSON.stringify(preferences));
   }, [preferences]);

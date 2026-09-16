@@ -30,6 +30,9 @@ const docUpload = multer({
   },
 });
 
+// Public SSE endpoint for progress tracking (auth happens via unique jobId)
+router.get("/progress/:jobId", controller.uploadProgress);
+
 router.use(requireAuth);
 router.post("/transcript", upload.single("file"), controller.createTranscript);
 router.get("/content", controller.listContent);
@@ -47,5 +50,7 @@ router.get("/analytics", controller.getAnalytics);
 
 router.post("/content/:contentId/translate", controller.translateContent);
 router.post("/translate/document", docUpload.single("file"), controller.translateDocument);
+
+router.post("/tts", controller.tts);
 
 module.exports = router;

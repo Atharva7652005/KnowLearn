@@ -24,6 +24,8 @@
     "mongoose": "^9.9.2",
     "multer": "^2.2.0",
     "node-cache": "^5.1.2",
-    "razorpay": "^2.9.8"
+    "nodemailer": "^10.0.9",
+    "razorpay": "^2.9.8",
+    "sarvamai": "^1.1.8-alpha.5"
   }
 }
