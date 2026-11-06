@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
-import { api } from "../api";
-import { Bot, LoaderCircle, MessageCircle, RefreshCw, Send, Sparkles, ChevronDown, Check, Globe, Clock, FileText, PlaySquare, Copy, ExternalLink, Video, Volume2, Square } from "lucide-react";
+import { api, getWorkspaces, shareToWorkspace } from "../api";
+import { Share2, Bot, LoaderCircle, MessageCircle, RefreshCw, Send, Sparkles, ChevronDown, Check, Globe, Clock, FileText, PlaySquare, Copy, ExternalLink, Video, Volume2, Square } from "lucide-react";
 import { Flashcards, Notes } from "../components/LearningExtras";
 import ReactMarkdown from "react-markdown";
 
@@ -23,7 +23,7 @@ function getLanguagesForPlan(plan) {
   return TRANSLATION_LANGUAGES;
 }
 
-export default function Lesson({ current, loading, onSummary, onQuiz, onNotice, token, saveContent, activePlan }) { 
+export default function Lesson({ current, loading, onSummary, onQuiz, onNotice, token, saveContent, activePlan, isWorkspace, isOwner }) { 
   const [tab, setTab] = useState(current?.summary ? "Summary" : "Transcript"); 
   
   const [targetLang, setTargetLang] = useState(current?.englishTranslation ? "English" : "");
@@ -105,7 +105,7 @@ export default function Lesson({ current, loading, onSummary, onQuiz, onNotice, 
         if (index >= chunks.length || window.__currentTTSId !== currentSession) return null;
         return api("/learning/tts", {
           token, method: "POST",
-          body: { text: chunks[index], targetLang, contentId: current.id }
+          body: { text: chunks[index], targetLang, contentId: current.id || current._id }
         }).catch(err => { throw err; });
       };
 
@@ -382,10 +382,10 @@ export default function Lesson({ current, loading, onSummary, onQuiz, onNotice, 
           </div>
         </div>
       )}
-      {tab === "Flashcards" && <Flashcards current={current} token={token} saveContent={saveContent} onNotice={onNotice} />}
-      {tab === "Notes" && <Notes current={current} token={token} saveContent={saveContent} onNotice={onNotice} />}
-      {tab === "Quiz" && <Quiz current={current} token={token} saveContent={saveContent} onNotice={onNotice} onQuiz={generateFreshQuiz} loading={loading} />}
-      {tab === "Ask AI" && <RagChat current={current} token={token} onNotice={onNotice} saveContent={saveContent} />}
+      {tab === "Flashcards" && <Flashcards current={current} token={token} saveContent={saveContent} onNotice={onNotice} isWorkspace={isWorkspace} isOwner={isOwner} />}
+      {tab === "Notes" && <Notes current={current} token={token} saveContent={saveContent} onNotice={onNotice} isWorkspace={isWorkspace} isOwner={isOwner} />}
+      {tab === "Quiz" && <Quiz current={current} token={token} saveContent={saveContent} onNotice={onNotice} onQuiz={generateFreshQuiz} loading={loading} isWorkspace={isWorkspace} isOwner={isOwner} />}
+      {tab === "Ask AI" && <RagChat current={current} token={token} onNotice={onNotice} saveContent={saveContent} isWorkspace={isWorkspace} isOwner={isOwner} />}
       {tab === "Analysis" && <Analysis analysis={current.latestAnalysis} />}
     </div>
   );
@@ -435,7 +435,8 @@ function Quiz({ current, token, saveContent, onNotice, onQuiz, loading }) {
         question_id: question.question_id, 
         answer: answers[question.question_id] || "" 
       })); 
-      const analysis = await api(`/learning/content/${current.id}/evaluate`, { token, method: "POST", body: { answers: payload } }); 
+      const contentId = current.id || current._id;
+        const analysis = await api(`/learning/content/${contentId}/evaluate`, { token, method: "POST", body: { answers: payload } }); 
       setResult(analysis); 
       saveContent({ ...current, latestAnalysis: analysis }); 
     } catch (err) { 
@@ -536,7 +537,7 @@ function Quiz({ current, token, saveContent, onNotice, onQuiz, loading }) {
   ); 
 }
 
-function RagChat({ current, token, onNotice, saveContent }) {
+function RagChat({ current, token, onNotice, saveContent, isWorkspace, isOwner }) {
   const [messages, setMessages] = useState(
     current.chatHistory?.length > 0 
       ? current.chatHistory 
@@ -552,13 +553,18 @@ function RagChat({ current, token, onNotice, saveContent }) {
 
   async function submit(event) {
     event.preventDefault();
+    if (isWorkspace) {
+        if (!isOwner) return onNotice("Only the group owner can generate content.");
+        return onNotice("You cannot generate content from here. Please generate it from the specific Content tab.");
+    }
     const text = question.trim();
     if (!text || sending) return;
     setQuestion(""); 
     setMessages((items) => [...items, { role: "user", text }]); 
     setSending(true);
     try {
-      const result = await api(`/learning/content/${current.id}/chat`, { token, method: "POST", body: { question: text } });
+      const contentId = current.id || current._id;
+      const result = await api(`/learning/content/${contentId}/chat`, { token, method: "POST", body: { question: text } });
       const cleanAnswer = result.answer.replace(/[*#]/g, '').replace(/--/g, '');
       
       setMessages((items) => {

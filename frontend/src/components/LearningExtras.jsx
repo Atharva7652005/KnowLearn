@@ -5,12 +5,16 @@ import ReactMarkdown from "react-markdown";
 
 
 
-export function Notes({ current, token, saveContent, onNotice }) {
+export function Notes({ current, token, saveContent, onNotice, isWorkspace, isOwner }) {
   const [generating, setGenerating] = useState(false);
   async function generate() {
+    if (isWorkspace) {
+        if (!isOwner) return onNotice("Only the group owner can generate content.");
+        return onNotice("You cannot generate content from here. Please generate it from the specific Content tab.");
+    }
     if (generating) return;
     setGenerating(true);
-    try { const result = await api(`/learning/content/${current.id}/notes`, { token, method: "POST" }); saveContent({ ...current, notes: result.notes }); }
+    try { const result = await api(`/learning/content/${current.id || current._id}/notes`, { token, method: "POST" }); saveContent({ ...current, notes: result.notes }); }
     catch (error) { onNotice(error.message); }
     finally { setGenerating(false); }
   }
@@ -22,16 +26,20 @@ function LoadingLabel({ label }) {
   return <span className="loading-label"><LoaderCircle className="spin" size={15} /> {label}</span>;
 }
 
-export function Flashcards({ current, token, saveContent, onNotice }) {
+export function Flashcards({ current, token, saveContent, onNotice, isWorkspace, isOwner }) {
   const [index, setIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
   const [generating, setGenerating] = useState(false);
   const cards = current.flashcards || [];
   useEffect(() => { setIndex(0); setRevealed(false); }, [current.id, cards.length]);
   async function generate() {
+    if (isWorkspace) {
+        if (!isOwner) return onNotice("Only the group owner can generate content.");
+        return onNotice("You cannot generate content from here. Please generate it from the specific Content tab.");
+    }
     if (generating) return;
     setGenerating(true);
-    try { const result = await api(`/learning/content/${current.id}/flashcards`, { token, method: "POST" }); saveContent({ ...current, flashcards: result.flashcards }); }
+    try { const result = await api(`/learning/content/${current.id || current._id}/flashcards`, { token, method: "POST" }); saveContent({ ...current, flashcards: result.flashcards }); }
     catch (error) { onNotice(error.message); }
     finally { setGenerating(false); }
   }

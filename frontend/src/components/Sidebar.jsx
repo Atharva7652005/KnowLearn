@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Search, Clock, Play, Box, HelpCircle, MessageSquare, ChevronDown, Settings, LogOut, CreditCard, Home, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Users, Plus, Search, Clock, Play, Box, HelpCircle, MessageSquare, ChevronDown, Settings, LogOut, CreditCard, Home, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
 export default function Sidebar({ page, setPage, session, logout, content, open }) {
   const navigate = useNavigate();
@@ -56,6 +56,9 @@ export default function Sidebar({ page, setPage, session, logout, content, open 
           </button>
           <button className={`nav-item flex items-center ${isCollapsed ? 'justify-center' : 'gap-3 px-3'} py-3 rounded-lg transition-colors hover:bg-[var(--bg-hover)] ${page === "Analysis" ? "bg-[var(--primary-light)] text-[var(--primary-color)]" : "text-[var(--text-secondary)]"}`} onClick={() => setPage("Analysis")} title="Analysis">
             <Box size={18} className="shrink-0" /> {!isCollapsed && <span className="whitespace-nowrap">Analysis</span>}
+          </button>
+          <button className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3 px-3'} py-3 rounded-lg transition-colors hover:bg-[var(--bg-hover)] ${page === "Workspaces" || page === "WorkspaceDashboard" ? "bg-[var(--primary-light)] text-[var(--primary-color)]" : "text-[var(--text-secondary)]"}`} onClick={() => setPage("Workspaces")} title="Workspaces">
+            <Users size={18} className="shrink-0" /> {!isCollapsed && <span className="whitespace-nowrap">Workspaces</span>}
           </button>
         </div>
 
@@ -130,4 +133,5 @@ export default function Sidebar({ page, setPage, session, logout, content, open 
       </div>
     </aside>
   );
-}
+
+        }

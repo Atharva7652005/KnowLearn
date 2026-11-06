@@ -1,3 +1,4 @@
+const Workspace = require("../models/Workspace");
 const { SarvamAIClient } = require("sarvamai");
 const fs = require("fs");
 const FormData = require("form-data");
@@ -141,6 +142,7 @@ async function createTranscript(req, res, next) {
 
     let result;
     let title;
+    const workspaceId = req.body.workspaceId;
     let language;
     let uploadedSourceUrl = req.body.youtubeUrl;
 
@@ -194,6 +196,7 @@ async function createTranscript(req, res, next) {
       language: result.language || language,
       transcript: result.original_transcript,
       englishTranslation: result.english_translation,
+      workspaceId: workspaceId || undefined,
     });
     await delCache(`user:content:list:${req.userId}`);
     sendProgress(jobId, "complete", "Successfully added to your learning content!", 100);
@@ -348,19 +351,24 @@ async function flashcards(req, res, next) {
 }
 
 async function evaluate(req, res, next) {
-  try {
-    const content = await LearningContent.findOne({ _id: req.params.contentId, user: req.userId });
-    if (!content?.quiz?.quizId) return res.status(400).json({ message: "Generate a quiz before submitting answers." });
-    const result = await fastApi("/evaluate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ quiz_id: content.quiz.quizId, answers: req.body.answers }) });
-    content.latestAnalysis = result;
-    await content.save();
-      await delCache(`content:detail:${req.params.contentId}`);
-    
-    // Award points
-    await User.findByIdAndUpdate(req.userId, { $inc: { rewardsPoints: 50 } });
-    
-    return res.json(result);
-  } catch (error) { return next(error); }
+    try {
+      const content = await LearningContent.findById(req.params.contentId);
+      if (!content) return res.status(404).json({ message: "Content not found" });
+      if (!content.quiz?.quizId) return res.status(400).json({ message: "Generate a quiz before submitting answers." });
+      const result = await fastApi("/evaluate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ quiz_id: content.quiz.quizId, answers: req.body.answers }) });
+      
+      // Only save to document if owner (to prevent overwriting shared workspace content)
+      if (content.user.toString() === req.userId.toString()) {
+          content.latestAnalysis = result;
+          await content.save();
+          await delCache(`content:detail:${req.params.contentId}`);
+      }
+      
+      // Award points
+      await User.findByIdAndUpdate(req.userId, { $inc: { rewardsPoints: 50 } });
+      
+      return res.json(result);
+    } catch (error) { return next(error); }
 }
 
 async function deleteContent(req, res, next) {
@@ -586,6 +594,7 @@ async function translateDocument(req, res, next) {
       sourceUrl: cloudinaryResult.secure_url,
       title: "Translated Document",
       transcript: "Document Translation",
+      workspaceId: req.body.workspaceId || undefined,
     });
     await newContent.save();
     await delCache(`user:content:list:${req.userId}`);
@@ -702,4 +711,22 @@ const tts = async (req, res) => {
 };
 
 
-module.exports = { uploadProgress, createTranscript, listContent, getContent, summary, chat, generalChat, quiz, notes, flashcards, evaluate, deleteContent, chatFeedback, translateContent, getAnalytics, translateDocument, tts };
+const shareContent = async (req, res) => {
+  try {
+    const { workspaceId } = req.body;
+    const content = await LearningContent.findOne({ _id: req.params.contentId, user: req.userId });
+    if (!content) return res.status(404).json({ message: "Content not found" });
+    
+    content.workspaceId = workspaceId;
+    await content.save();
+    
+    await delCache(`user:content:list:${req.userId}`);
+    
+    res.json({ message: "Content shared successfully", content });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+module.exports = { uploadProgress, createTranscript, listContent, getContent, summary, chat, generalChat, quiz, notes, flashcards, evaluate, deleteContent, chatFeedback, translateContent, getAnalytics, translateDocument, tts , shareContent };
+

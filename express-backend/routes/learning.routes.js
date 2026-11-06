@@ -38,6 +38,7 @@ router.post("/transcript", upload.single("file"), controller.createTranscript);
 router.get("/content", controller.listContent);
 router.get("/content/:contentId", controller.getContent);
 router.post("/content/:contentId/summary", controller.summary);
+router.put("/content/:contentId/share", controller.shareContent);
 router.post("/chat/general", controller.generalChat);
 router.post("/content/:contentId/chat", controller.chat);
 router.post("/content/:contentId/chat/feedback", controller.chatFeedback);

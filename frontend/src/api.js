@@ -21,3 +21,18 @@ export async function api(path, { token, method = "GET", body } = {}) {
   if (!response.ok) throw new Error(userSafeMessage(data.message || data.detail || data.error));
   return data;
 }
+
+
+export const createWorkspace = (data, token) => api('/workspaces/create', { token, method: 'POST', body: data });
+export const joinWorkspace = (data, token) => api('/workspaces/join', { token, method: 'POST', body: data });
+export const getWorkspaces = (token) => api('/workspaces/list', { token });
+export const getWorkspaceContent = (id, token) => api(`/workspaces/${id}/content`, { token });
+
+
+export const shareToWorkspace = async (contentId, workspaceId, token) => {
+  return await api(`/learning/content/${contentId}/share`, {
+    method: "PUT",
+    token,
+    body: { workspaceId }
+  });
+};

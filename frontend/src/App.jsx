@@ -1,8 +1,11 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+
+                            import { useEffect, useMemo, useState, useCallback } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { api, API_URL } from "./api";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
+import Workspaces from './pages/Workspaces';
+import WorkspaceDashboard from './pages/WorkspaceDashboard';
 import Dashboard from "./pages/Dashboard";
 import Lesson from "./pages/Lesson";
 import History from "./pages/History";
@@ -20,6 +23,7 @@ import { Info, X, MessageCircle } from "lucide-react";
 function MainApp() {
   const [session, setSession] = useState(() => ({ token: localStorage.getItem("knowlearn_token"), user: null }));
   const [isInitializing, setIsInitializing] = useState(true);
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState(null);
   const [page, setPage] = useState("Dashboard");
   const [content, setContent] = useState([]);
   const [selected, setSelected] = useState(null);
@@ -179,7 +183,9 @@ function MainApp() {
           </div>
         )}
         
-        {page === "Dashboard" && <Dashboard content={content} upload={upload} loading={loading} session={session} open={openLesson} onLearn={(query) => { setLearnQuery(query); setPage("Learn"); }} setTranslatedDoc={setTranslatedDoc} setPage={setPage} />}
+                {page === "Workspaces" && <Workspaces onSelectWorkspace={(id) => { setSelectedWorkspaceId(id); setPage("WorkspaceDashboard"); }} />}
+        {page === "WorkspaceDashboard" && <WorkspaceDashboard onBack={() => { setSelectedWorkspaceId(null); setPage("Workspaces"); }} workspaceId={selectedWorkspaceId} upload={upload} loading={loading} session={session} onNotice={setNotice} saveContent={saveContent} />}
+{page === "Dashboard" && <Dashboard content={content} upload={upload} loading={loading} session={session} open={openLesson} onLearn={(query) => { setLearnQuery(query); setPage("Learn"); }} setTranslatedDoc={setTranslatedDoc} setPage={setPage} />}
         {page === "Lesson" && <Lesson current={current} loading={loading} onSummary={generateSummary} onQuiz={generateQuiz} onNotice={setNotice} token={token} saveContent={saveContent} activePlan={session?.user?.activePlan || "Free"} />}
         {page === "History" && <History content={content} open={openLesson} />}
         {page === "Analysis" && <Analysis content={content} open={openLesson} session={session} token={token} setPage={setPage} />}
